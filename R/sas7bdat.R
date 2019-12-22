@@ -531,7 +531,9 @@ read.sas7bdat <- function(file, encoding="", debug=FALSE) {
                         # Apply encoding
                         Encoding(data[[col$name]][row]) <- encoding
                         # Strip beginning and trailing spaces
-                        data[[col$name]][row] <- gsub('^ +| +$', '', data[[col$name]][row])
+                        # data[[col$name]][row] <- gsub('^ +| +$', '', data[[col$name]][row])
+                        # Strip only trailing spaces
+                        data[[col$name]][row] <- gsub('[[:space:]]*$', '', data[[col$name]][row])
                     }
                 }
             }
