@@ -180,9 +180,19 @@ read_subheaders <- function(page, u64) {
     return(subhs)
 }
 
+RAW_DATASTEP <- as.raw(c(0x44,0x41,0x54,0x41,0x53,0x54,0x45,0x50))
+          
 read_column_names <- function(col_name, col_text, u64) {
     names <- list()
     name_count <- 0
+
+    firstOff <- NULL
+    firstDS <- NULL
+    ctr <- col_text[[1]]$raw
+    for (i in 1:(length(ctr)-7))
+        if (identical(RAW_DATASTEP,ctr[i:(i+7)])&is.null(firstDS))
+            firstDS <- i
+   
     offp <- if(u64) 8 else 4
     for(subh in col_name) {
         cmax <- (subh$length - if(u64) 28 else 20)/8
@@ -195,8 +205,17 @@ read_column_names <- function(col_name, col_text, u64) {
             len  <- read_int(subh$raw, base + 4, 2)
             names[[name_count]]$name <- read_str(col_text[[hdr+1]]$raw,
                                                  off + offp, len)
+            if (is.null(firstOff)) firstOff <- off
         }
     }
+    
+    if (!is.null(firstDS) && !is.null(firstOff) && firstDS+8<=firstOff)
+	  {
+		    dsl <- ctr[(firstDS+8):firstOff]
+		    DATASETLABEL <<- rawToChar(dsl[dsl != 0])
+		    if (DATASETLABEL == '"' | DATASETLABEL == "'") DATASETLABEL <<- ""
+	  }            
+                     
     return(names)
 }
 
@@ -262,6 +281,8 @@ MAGIC     <- as.raw(c(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                       0xb3,0x14,0x11,0xcf,0xbd,0x92,0x8, 0x0,
                       0x9, 0xc7,0x31,0x8c,0x18,0x1f,0x10,0x11))
 
+DATASETLABEL <<- ""
+                                               
 check_magic_number <- function(data)
     identical(data[1:length(MAGIC)], MAGIC)
 
@@ -560,6 +581,9 @@ read.sas7bdat <- function(file, encoding="", debug=FALSE) {
     attr(data, 'OS.name')       <- OS_name
     attr(data, 'endian')        <- endian
     attr(data, 'winunix')       <- winunix
+                                    
+    attr(data,'data.set.label') <- DATASETLABEL
+                                    
     if(debug)
         attr(data, 'debug')     <- sys.frame(1)
     return(data)
