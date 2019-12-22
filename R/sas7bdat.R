@@ -205,7 +205,7 @@ read_column_names <- function(col_name, col_text, u64) {
             len  <- read_int(subh$raw, base + 4, 2)
             names[[name_count]]$name <- read_str(col_text[[hdr+1]]$raw,
                                                  off + offp, len)
-            if (is.null(firstOff)) firstOff <- off
+            if (is.null(firstOff)) firstOff <- off + offp
         }
     }
     
