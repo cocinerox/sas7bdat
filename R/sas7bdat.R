@@ -180,11 +180,12 @@ read_subheaders <- function(page, u64) {
     return(subhs)
 }
 
-RAW_DATASTEP <- as.raw(c(0x44,0x41,0x54,0x41,0x53,0x54,0x45,0x50))
           
 read_column_names <- function(col_name, col_text, u64) {
     names <- list()
     name_count <- 0
+
+    RAW_DATASTEP <- as.raw(c(0x44,0x41,0x54,0x41,0x53,0x54,0x45,0x50))
 
     firstOff <- NULL
     firstDS <- NULL
@@ -209,14 +210,15 @@ read_column_names <- function(col_name, col_text, u64) {
         }
     }
     
+    DATASETLABEL <- ""
     if (!is.null(firstDS) && !is.null(firstOff) && firstDS+8<=firstOff)
 	  {
 		    dsl <- ctr[(firstDS+8):firstOff]
-		    DATASETLABEL <<- rawToChar(dsl[dsl != 0])
-		    if (DATASETLABEL == '"' | DATASETLABEL == "'") DATASETLABEL <<- ""
+		    DATASETLABEL <- rawToChar(dsl[dsl != 0])
+		    if (DATASETLABEL == '"' | DATASETLABEL == "'") DATASETLABEL <- ""
 	  }            
                      
-    return(names)
+    return(list(names, DATASETLABEL))
 }
 
 read_column_labels_formats <- function(col_labs, col_text, u64) {
@@ -281,7 +283,6 @@ MAGIC     <- as.raw(c(0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                       0xb3,0x14,0x11,0xcf,0xbd,0x92,0x8, 0x0,
                       0x9, 0xc7,0x31,0x8c,0x18,0x1f,0x10,0x11))
 
-DATASETLABEL <<- ""
                                                
 check_magic_number <- function(data)
     identical(data[1:length(MAGIC)], MAGIC)
@@ -327,8 +328,7 @@ read.sas7bdat <- function(file, encoding="", debug=FALSE) {
         stop("invalid 'file' argument")
     }
 
-    
-    # Check magic number
+        # Check magic number
     header <- readBin(con, "raw", 288, 1)
     if(length(header) < 288)
         stop("header too short (not a sas7bdat file?)")
@@ -482,7 +482,9 @@ read.sas7bdat <- function(file, encoding="", debug=FALSE) {
     if(length(col_name) < 1)
         stop(paste("no column name subheaders found", BUGREPORT))
 
-    col_name <- read_column_names(col_name, col_text, u64)
+    col_name_lb <- read_column_names(col_name, col_text, u64)
+    col_name <- col_name_lb[[1]]
+    DATASETLABEL <- col_name_lb[[2]]
     if(length(col_name) != col_count)
         stop(paste("found", length(col_name), 
             "column names where", col_count, "expected", BUGREPORT))
